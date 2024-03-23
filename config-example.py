@@ -3,10 +3,10 @@ OPENSKY_API_USER = 'your_username'
 OPENSKY_API_PASS = 'your_password'
 
 # Path to your downloaded OpenSky's aircraft database CSV
-AIRCRAFT_DB_PATH = 'your_file_path.csv'
+AIRCRAFT_DB_PATH = 'aircraftdata.csv'
 
 # Aircraft type configuration
-AIRCRAFT_TYPE = 'Boeing747'  # Change this to the desired aircraft type
+AIRCRAFT_TYPE = 'AIRCRAFT TYPE'  # Change this to the desired aircraft type
 
 # Add your social media API keys and secrets here
 SOCIAL_MEDIA_KEYS = {

@@ -1,3 +1,8 @@
+#Developer Notes
+#The download steps work, and a new database is created with a table containing all aircraft.
+#The column headers are not created correctly.
+#The step to filter for a specific aircraft type doesn't work.
+
 import os
 import requests
 import pandas as pd
@@ -46,15 +51,31 @@ def download_csv(url, filename):
         print(f"Failed to download the file: {e}")
         return False
 
-def csv_to_sqlite(csv_file, db_file, table_name):
-    print(f"Converting the entire CSV {csv_file} to SQLite...")
+def csv_to_sqlite(csv_file, db_file):
+    table_name = "aircraft_type"
+    print(f"Converting the entire CSV {csv_file} to SQLite with table {table_name}...")
     try:
-        # Delete all data from the table
-        with closing(sqlite3.connect(db_file)) as conn:
-            conn.execute(f"DELETE FROM {table_name}")
+        # Read CSV with header as the first row
+        column_names = ["icao24","registration","manufacturericao","manufacturername","model","typecode","serialnumber","linenumber","icaoaircrafttype","operator","operatorcallsign","operatoricao","operatoriata","owner","testreg","registered","reguntil","status","built","firstflightdate","seatconfiguration","engines","modes","adsb","acars","notes","categoryDescription"]
+        df = pd.read_csv(csv_file, encoding='ISO-8859-1', low_memory=False, header=0, names=column_names)
         
-        # Read CSV and insert into SQLite
-        df = pd.read_csv(csv_file, encoding='ISO-8859-1', low_memory=False)
+        # Delete all data from the table if it exists
+        with closing(sqlite3.connect(db_file)) as conn:
+            try:
+                conn.execute(f"DELETE FROM {table_name}")
+            except sqlite3.OperationalError:
+                print(f"Table '{table_name}' does not exist. Skipping delete step.")
+        
+        # Insert CSV data into SQLite
+        with closing(sqlite3.connect(db_file)) as conn:
+            df.to_sql(table_name, conn, if_exists='replace', index=False)
+        print(f"SQLite database updated with {table_name} data.")
+        return True
+    except Exception as e:
+        print(f"An error occurred while converting CSV to SQLite: {e}")
+        return False
+        
+        # Insert CSV data into SQLite
         with closing(sqlite3.connect(db_file)) as conn:
             df.to_sql(table_name, conn, if_exists='replace', index=False)
         print(f"SQLite database updated with {table_name} data.")
@@ -63,21 +84,21 @@ def csv_to_sqlite(csv_file, db_file, table_name):
         print(f"An error occurred while converting CSV to SQLite: {e}")
         return False
 
-def filter_aircraft_type(db_file, source_table, target_table, aircraft_type):
+def filter_aircraft_type(db_file, source_table, aircraft_type):
     print(f"Filtering for {aircraft_type} aircraft...")
     try:
-        with closing(sqlite3.connect(db_file)) as conn:
-            # Read existing data from the target table
-            existing_df = pd.read_sql_query(f"SELECT * FROM {target_table}", conn)
-
-            # Read new data from source table based on aircraft type
-            new_df = pd.read_sql_query(f"SELECT * FROM {source_table} WHERE model LIKE '%{aircraft_type}%'", conn)
-
-            # Concatenate existing and new data, drop duplicates, and update the target table
-            combined_df = pd.concat([existing_df, new_df]).drop_duplicates()
-            combined_df.to_sql(target_table, conn, if_exists='replace', index=False)
+        target_table = aircraft_type.lower() + "_list"  # Generate table name based on aircraft type
         
-        print(f"SQLite database updated with new {aircraft_type} data without duplicates.")
+        with closing(sqlite3.connect(db_file)) as conn:
+            # Read new data from source table based on aircraft type
+            print("Reading data from source table...")
+            new_df = pd.read_sql_query(f"SELECT * FROM {source_table} WHERE [Unnamed: 4] LIKE '%{aircraft_type}%'", conn)
+
+            # Save the filtered data to a new table named after aircraft type
+            print(f"Saving filtered {aircraft_type} aircraft data to table '{target_table}'...")
+            new_df.to_sql(target_table, conn, if_exists='replace', index=False)
+        
+        print(f"Filtered {aircraft_type} aircraft data saved to table '{target_table}'.")
         return True
     except Exception as e:
         print(f"An error occurred while filtering {aircraft_type} data: {e}")
@@ -96,7 +117,7 @@ def main():
                     print("Latest version already downloaded. Skipping...")
                     return
         if download_csv(latest_csv_url, latest_csv_filename):
-            if csv_to_sqlite(latest_csv_filename, DB_FILENAME, TABLE_NAME):
+            if csv_to_sqlite(latest_csv_filename, DB_FILENAME):  # Remove TABLE_NAME argument
                 with open(LOG_FILENAME, 'w') as log_file:
                     log_file.write(latest_csv_filename)
                 if os.path.exists(latest_csv_filename):

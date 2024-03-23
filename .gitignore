@@ -2,6 +2,8 @@
 download_log.txt
 config.py
 aircraftData.db
+747list.csv
+icao.csv
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

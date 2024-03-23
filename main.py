@@ -1,12 +1,12 @@
 import schedule
 import time
-from opensky_api import fetch_747_flights
+from opensky_api import fetch_aircraft_flights
 from social_media_handler import post_updates
 from storage import check_duplicate, update_record
 
 def job():
     try:
-        flights = fetch_747_flights()
+        flights = fetch_aircraft_flights()
         for flight in flights:
             if not check_duplicate(flight['icao24']):
                 post_updates(flight)
