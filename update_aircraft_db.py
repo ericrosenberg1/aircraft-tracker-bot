@@ -49,6 +49,11 @@ def download_csv(url, filename):
 def csv_to_sqlite(csv_file, db_file, table_name):
     print(f"Converting the entire CSV {csv_file} to SQLite...")
     try:
+        # Delete all data from the table
+        with closing(sqlite3.connect(db_file)) as conn:
+            conn.execute(f"DELETE FROM {table_name}")
+        
+        # Read CSV and insert into SQLite
         df = pd.read_csv(csv_file, encoding='ISO-8859-1', low_memory=False)
         with closing(sqlite3.connect(db_file)) as conn:
             df.to_sql(table_name, conn, if_exists='replace', index=False)
@@ -58,24 +63,24 @@ def csv_to_sqlite(csv_file, db_file, table_name):
         print(f"An error occurred while converting CSV to SQLite: {e}")
         return False
 
-def filter_boeing_747(db_file, source_table, target_table):
-    print("Filtering for Boeing 747 aircraft...")
+def filter_aircraft_type(db_file, source_table, target_table, aircraft_type):
+    print(f"Filtering for {aircraft_type} aircraft...")
     try:
         with closing(sqlite3.connect(db_file)) as conn:
-            df = pd.read_sql_query(f"SELECT * FROM {source_table}", conn)
-            if 'model' not in df.columns:
-                print("Error: 'model' column not found in the database.")
-                return False
-            boeing747_df = df[df['model'].str.contains('747', na=False)]
-            if not boeing747_df.empty:
-                boeing747_df.to_sql(target_table, conn, if_exists='replace', index=False)
-                print(f"SQLite database updated with {target_table} data.")
-                return True
-            else:
-                print("No Boeing 747 data found.")
-                return False
+            # Read existing data from the target table
+            existing_df = pd.read_sql_query(f"SELECT * FROM {target_table}", conn)
+
+            # Read new data from source table based on aircraft type
+            new_df = pd.read_sql_query(f"SELECT * FROM {source_table} WHERE model LIKE '%{aircraft_type}%'", conn)
+
+            # Concatenate existing and new data, drop duplicates, and update the target table
+            combined_df = pd.concat([existing_df, new_df]).drop_duplicates()
+            combined_df.to_sql(target_table, conn, if_exists='replace', index=False)
+        
+        print(f"SQLite database updated with new {aircraft_type} data without duplicates.")
+        return True
     except Exception as e:
-        print(f"An error occurred while filtering Boeing 747 data: {e}")
+        print(f"An error occurred while filtering {aircraft_type} data: {e}")
         return False
 
 def main():
