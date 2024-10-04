@@ -5,6 +5,7 @@ import sqlite3
 from bs4 import BeautifulSoup
 from contextlib import closing
 import logging
+import csv
 
 # Constants
 BASE_URL = "https://opensky-network.org/datasets/metadata/"
@@ -48,11 +49,25 @@ def download_csv(url, filename):
 def csv_to_sqlite(csv_file, db_file):
     logging.info(f"Converting the CSV {csv_file} to SQLite and filtering for Boeing 747 aircraft...")
     try:
-        # Read CSV with correct column names
-        df = pd.read_csv(csv_file, encoding='ISO-8859-1', low_memory=False)
+        # Read CSV with flexible parsing
+        df = pd.read_csv(csv_file, encoding='ISO-8859-1', low_memory=False, 
+                         on_bad_lines='skip', quoting=csv.QUOTE_ALL, 
+                         skipinitialspace=True)
+        
+        # Log the number of rows and columns
+        logging.info(f"CSV file loaded. Shape: {df.shape}")
+        logging.info(f"Columns: {df.columns.tolist()}")
+        
+        # Try to find a column that might contain the model information
+        model_column = next((col for col in df.columns if 'model' in col.lower()), None)
+        if not model_column:
+            logging.warning("Could not find a column containing model information.")
+            return False
         
         # Filter for Boeing 747 aircraft
-        boeing_747_df = df[df['model'].str.contains('747', case=False, na=False)]
+        boeing_747_df = df[df[model_column].str.contains('747', case=False, na=False)]
+        
+        logging.info(f"Filtered for Boeing 747 aircraft. Shape: {boeing_747_df.shape}")
         
         # Connect to SQLite database
         with closing(sqlite3.connect(db_file)) as conn:
