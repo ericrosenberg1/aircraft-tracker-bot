@@ -4,6 +4,7 @@ config.py
 aircraftData.db
 747list.csv
 icao.csv
+twitter_config.py
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
