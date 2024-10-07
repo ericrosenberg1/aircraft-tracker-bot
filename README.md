@@ -21,6 +21,9 @@ In addition to its primary function, the project also demonstrates the practical
 - Filtering and avoidance of duplicate postings.
 - Easy customization and scalability for future enhancements.
 
+## Code Quality
+[![Maintainability](https://api.codeclimate.com/v1/badges/de8f28557e1be8d7062e/maintainability)](https://codeclimate.com/github/ericrosenberg1/747-Tracker-Bot/maintainability)
+
 ## How to Use
 
 Please refer to the [Installation](#installation) and [Usage](#usage) sections for detailed instructions on setting up and using the 747 Flight Tracker Bot.
@@ -45,4 +48,3 @@ This project is licensed under the [MIT License](LICENSE) - see the LICENSE file
 
 - OpenSky Network for providing the aircraft flight data.
 - The Python community for the excellent documentation and libraries that made this project possible.
-
