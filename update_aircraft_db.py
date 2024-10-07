@@ -4,81 +4,177 @@ import pandas as pd
 import sqlite3
 from bs4 import BeautifulSoup
 from contextlib import closing
-import logging
 import csv
+import logging
+
+# Set up logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 # Constants
 BASE_URL = "https://opensky-network.org/datasets/metadata/"
-DB_FILENAME = "boeing747_data.db"
-TABLE_NAME = "boeing747_aircraft"
+DB_FILENAME = "aircraftData.db"
+TABLE_NAME = "aircraft_type"
 LOG_FILENAME = "download_log.txt"
-
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+BOEING_747_CSV = "boeing_747_icao.csv"
 
 def get_latest_csv_version(base_url):
-    logging.info("Fetching the latest dataset version...")
+    logger.info("Fetching the latest dataset version...")
     try:
         response = requests.get(base_url)
-        response.raise_for_status()
-        soup = BeautifulSoup(response.text, 'html.parser')
-        files = [a['href'] for a in soup.find_all('a', href=True) if 'aircraft-database-complete' in a['href'] and a['href'].endswith('.csv')]
-        if files:
-            latest_file = sorted(files)[-1]
-            logging.info(f"Found latest version: {latest_file}")
-            return latest_file
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.text, 'html.parser')
+            files = [a['href'] for a in soup.find_all('a', href=True) if 'aircraft-database-complete' in a['href'] and a['href'].endswith('.csv')]
+            if files:
+                latest_file = sorted(files)[-1]
+                logger.info(f"Found latest version: {latest_file}")
+                return latest_file
+            else:
+                logger.warning("No CSV files found on the page.")
+                return None
         else:
-            logging.warning("No CSV files found on the page.")
+            logger.error("Failed to retrieve data from OpenSky Network.")
             return None
     except Exception as e:
-        logging.error(f"An error occurred: {e}")
+        logger.error(f"An error occurred: {e}")
         return None
 
 def download_csv(url, filename):
-    logging.info(f"Downloading {url}...")
+    logger.info(f"Downloading {url}...")
     try:
         response = requests.get(url)
         response.raise_for_status()
         with open(filename, 'wb') as f:
             f.write(response.content)
-        logging.info("Download completed.")
+        logger.info("Download completed.")
         return True
     except Exception as e:
-        logging.error(f"Failed to download the file: {e}")
+        logger.error(f"Failed to download the file: {e}")
         return False
 
 def csv_to_sqlite(csv_file, db_file):
-    logging.info(f"Converting the CSV {csv_file} to SQLite and filtering for Boeing 747 aircraft...")
+    logger.info(f"Converting the entire CSV {csv_file} to SQLite with table {TABLE_NAME}...")
     try:
-        # Read CSV with flexible parsing
-        df = pd.read_csv(csv_file, encoding='ISO-8859-1', low_memory=False, 
-                         on_bad_lines='skip', quoting=csv.QUOTE_ALL, 
-                         skipinitialspace=True)
+        df = pd.read_csv(csv_file, low_memory=False, on_bad_lines='skip', quotechar="'", escapechar='\\')
         
-        # Log the number of rows and columns
-        logging.info(f"CSV file loaded. Shape: {df.shape}")
-        logging.info(f"Columns: {df.columns.tolist()}")
+        # Remove quotes from column names
+        df.columns = df.columns.str.replace("'", "")
         
-        # Try to find a column that might contain the model information
-        model_column = next((col for col in df.columns if 'model' in col.lower()), None)
-        if not model_column:
-            logging.warning("Could not find a column containing model information.")
-            return False
-        
-        # Filter for Boeing 747 aircraft
-        boeing_747_df = df[df[model_column].str.contains('747', case=False, na=False)]
-        
-        logging.info(f"Filtered for Boeing 747 aircraft. Shape: {boeing_747_df.shape}")
-        
-        # Connect to SQLite database
         with closing(sqlite3.connect(db_file)) as conn:
-            # Replace the entire table with new data
-            boeing_747_df.to_sql(TABLE_NAME, conn, if_exists='replace', index=False)
-        
-        logging.info(f"SQLite database updated with Boeing 747 aircraft data. Total aircraft: {len(boeing_747_df)}")
+            df.to_sql(TABLE_NAME, conn, if_exists='replace', index=False)
+        logger.info(f"SQLite database updated with {TABLE_NAME} data.")
         return True
     except Exception as e:
-        logging.error(f"An error occurred while converting CSV to SQLite: {e}")
+        logger.error(f"An error occurred while converting CSV to SQLite: {e}")
         return False
+
+def get_column_names(db_file):
+    logger.info("Getting column names from the database...")
+    try:
+        with closing(sqlite3.connect(db_file)) as conn:
+            cursor = conn.cursor()
+            cursor.execute(f"PRAGMA table_info({TABLE_NAME})")
+            columns = [row[1] for row in cursor.fetchall()]
+            logger.info(f"Column names: {columns}")
+            return columns
+    except Exception as e:
+        logger.error(f"An error occurred while getting column names: {e}")
+        return []
+
+def print_sample(db_file, columns):
+    logger.info("Printing a sample of the database contents...")
+    try:
+        with closing(sqlite3.connect(db_file)) as conn:
+            sample_query = f"""
+            SELECT {', '.join(columns[:6])}  
+            FROM {TABLE_NAME} 
+            LIMIT 20
+            """
+            df = pd.read_sql_query(sample_query, conn)
+            logger.info("Sample of database contents:")
+            logger.info(df.to_string())
+    except Exception as e:
+        logger.error(f"An error occurred while printing sample data: {e}")
+
+def filter_boeing_747(db_file, columns):
+    logger.info("Filtering for Boeing 747 aircraft...")
+    try:
+        with closing(sqlite3.connect(db_file)) as conn:
+            # Check total number of records
+            total_count = pd.read_sql_query(f"SELECT COUNT(*) FROM {TABLE_NAME}", conn).iloc[0, 0]
+            logger.info(f"Total records in database: {total_count}")
+
+            # Determine which columns to use for filtering
+            manufacturer_col = next((col for col in columns if 'manufacturer' in col.lower()), None)
+            model_col = next((col for col in columns if 'model' in col.lower()), None)
+            type_col = next((col for col in columns if 'type' in col.lower()), None)
+
+            if not all([manufacturer_col, model_col, type_col]):
+                logger.error("Could not find necessary columns for filtering")
+                return False
+
+            # Check for any Boeing aircraft
+            boeing_query = f"""
+            SELECT COUNT(*) FROM {TABLE_NAME} 
+            WHERE LOWER({manufacturer_col}) LIKE '%boeing%' 
+               OR LOWER({model_col}) LIKE '%boeing%'
+               OR LOWER({type_col}) LIKE 'b7%'
+            """
+            boeing_count = pd.read_sql_query(boeing_query, conn).iloc[0, 0]
+            logger.info(f"Total Boeing aircraft: {boeing_count}")
+
+            # Check for 747 in any field
+            query_747 = f"""
+            SELECT COUNT(*) FROM {TABLE_NAME} 
+            WHERE LOWER({model_col}) LIKE '%747%' 
+               OR LOWER({type_col}) LIKE '%747%' 
+               OR LOWER({type_col}) LIKE 'b74%'
+            """
+            count_747 = pd.read_sql_query(query_747, conn).iloc[0, 0]
+            logger.info(f"Total aircraft with '747' in any field: {count_747}")
+
+            # Updated query to be more inclusive
+            icao24_col = next((col for col in columns if 'icao24' in col.lower()), None)
+            registration_col = next((col for col in columns if 'registration' in col.lower()), None)
+
+            query = f"""
+            SELECT {icao24_col}, {registration_col}, {manufacturer_col}, {model_col}, {type_col}
+            FROM {TABLE_NAME} 
+            WHERE LOWER({model_col}) LIKE '%747%' 
+               OR LOWER({type_col}) LIKE '%747%' 
+               OR LOWER({type_col}) LIKE 'b74%'
+               OR (LOWER({manufacturer_col}) LIKE '%boeing%' AND LOWER({model_col}) LIKE '%747%')
+            """
+            df = pd.read_sql_query(query, conn)
+        
+        if df.empty:
+            logger.warning("No Boeing 747 aircraft found in the database.")
+            return False
+
+        df.to_csv(BOEING_747_CSV, index=False)
+        logger.info(f"Boeing 747 aircraft data saved to {BOEING_747_CSV}")
+        logger.info(f"Number of Boeing 747 aircraft: {len(df)}")
+        logger.info("Sample of found aircraft:")
+        logger.info(df.head().to_string())
+        return True
+    except Exception as e:
+        logger.error(f"An error occurred while filtering Boeing 747 data: {e}")
+        return False
+
+def check_csv_structure(csv_file):
+    logger.info(f"Checking structure of CSV file: {csv_file}")
+    try:
+        df = pd.read_csv(csv_file, nrows=5, quotechar="'", escapechar='\\')
+        logger.info("First few rows of CSV:")
+        logger.info(df.to_string())
+        return True
+    except Exception as e:
+        logger.error(f"An error occurred while checking CSV structure: {e}")
+        return False
+
+def ensure_database_updated(csv_file, db_file):
+    logger.info(f"Ensuring database {db_file} is up to date...")
+    return csv_to_sqlite(csv_file, db_file)
 
 def main():
     latest_version = get_latest_csv_version(BASE_URL)
@@ -86,26 +182,37 @@ def main():
         latest_csv_url = BASE_URL + latest_version
         latest_csv_filename = latest_version.split('/')[-1]
 
-        if os.path.exists(LOG_FILENAME):
-            with open(LOG_FILENAME, 'r') as log_file:
-                last_downloaded = log_file.readline().strip()
-                if last_downloaded == latest_csv_filename:
-                    logging.info("Latest version already downloaded. Skipping...")
-                    return
+        if not os.path.exists(latest_csv_filename):
+            if not download_csv(latest_csv_url, latest_csv_filename):
+                logger.error("Failed to download the latest version.")
+                return
 
-        if download_csv(latest_csv_url, latest_csv_filename):
-            if csv_to_sqlite(latest_csv_filename, DB_FILENAME):
-                with open(LOG_FILENAME, 'w') as log_file:
-                    log_file.write(latest_csv_filename)
-                if os.path.exists(latest_csv_filename):
-                    os.remove(latest_csv_filename)
-                logging.info("Cleanup complete.")
+        if check_csv_structure(latest_csv_filename):
+            if ensure_database_updated(latest_csv_filename, DB_FILENAME):
+                columns = get_column_names(DB_FILENAME)
+                if columns:
+                    print_sample(DB_FILENAME, columns)
+                    if filter_boeing_747(DB_FILENAME, columns):
+                        logger.info("Boeing 747 CSV file created/updated.")
+                    else:
+                        logger.error("Failed to create/update Boeing 747 CSV file.")
+                else:
+                    logger.error("Failed to get column names from the database.")
             else:
-                logging.error("Failed to process the CSV file.")
+                logger.error("Failed to ensure database is updated.")
         else:
-            logging.error("Failed to download the latest version.")
+            logger.error("CSV file structure is not as expected.")
+
+        # Cleanup
+        if os.path.exists(latest_csv_filename):
+            os.remove(latest_csv_filename)
+            logger.info("Cleanup complete.")
+
+        # Update log file
+        with open(LOG_FILENAME, 'w') as log_file:
+            log_file.write(latest_csv_filename)
     else:
-        logging.warning("No new version available or failed to identify latest version.")
+        logger.error("Failed to identify latest version.")
 
 if __name__ == "__main__":
     main()

@@ -3,8 +3,10 @@ download_log.txt
 config.py
 aircraftData.db
 747list.csv
+boeing_747_icao.csv
 icao.csv
 twitter_config.py
+airport_db_update_log.txtairport_db.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
