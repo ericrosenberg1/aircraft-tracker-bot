@@ -1,5 +1,7 @@
 # 747 Flight Tracker Bot
 
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/e5f9430a10c3439ead92dc40df1ae001)](https://app.codacy.com/gh/ericrosenberg1/747-Tracker-Bot?utm_source=github.com&utm_medium=referral&utm_content=ericrosenberg1/747-Tracker-Bot&utm_campaign=Badge_Grade)
+
 ## What is the 747 Flight Tracker Bot?
 
 The 747 Flight Tracker Bot is a Python application designed to monitor and post updates about Boeing 747 flights worldwide. Utilizing data from the OpenSky Network's public API, this bot identifies when a Boeing 747 takes off or lands and shares this information on various social media platforms. Ideal for aviation enthusiasts, the tool aims to provide timely and interesting flight updates to its audience.
