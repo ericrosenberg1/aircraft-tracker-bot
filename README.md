@@ -6,7 +6,7 @@ The 747 Flight Tracker Bot is a Python application designed to monitor and post 
 
 ## Who created the 747 Flight Tracker Bot?
 
-This project was developed by [Your Name or Organization], an aviation enthusiast and software developer passionate about combining technology with aviation to create engaging and informative tools for the aviation community.
+This project was developed by Eric Rosenberg, an aviation enthusiast and software developer passionate about combining technology with aviation to create engaging and informative tools for the aviation community.
 
 ## What's the purpose of the project?
 
@@ -23,6 +23,7 @@ In addition to its primary function, the project also demonstrates the practical
 
 ## Code Quality
 [![Maintainability](https://api.codeclimate.com/v1/badges/de8f28557e1be8d7062e/maintainability)](https://codeclimate.com/github/ericrosenberg1/747-Tracker-Bot/maintainability)
+[![Test Coverage](https://api.codeclimate.com/v1/badges/de8f28557e1be8d7062e/test_coverage)](https://codeclimate.com/github/ericrosenberg1/747-Tracker-Bot/test_coverage)
 
 ## How to Use
 
@@ -30,19 +31,32 @@ Please refer to the [Installation](#installation) and [Usage](#usage) sections f
 
 ## Installation
 
-*Instructions on how to install and set up the project.*
+This app is currently only suitable for users comfortable with the command line. It requires installing a recent version of Python.
+1. Clone the project to your desired directory. Use CD to go to that directory.
+2. Run pip install -r requirements.txt.
+3. Rename config-example.py to config.py.
+4. Update config.py with your credentials for https://opensky-network.org.
+5. Sign up for the X 2.0 API (formerly Twitter). Get your keys and add them to twitter_config.py.
+6. Run python update_aircraft_db.py to generate a database of aircraft. Run python main.py to run the app.
+7. Set up a cron job to run the aircraft list update monthly and keep main.py running as desired.
 
 ## Usage
 
-*Instructions on how to use the project, including any relevant commands or scripts.*
+When connected to your desired social media accounts and running, it will automatically share aircraft details. For example, in a Tweet.
 
 ## Contributing
 
-We welcome contributions and suggestions! Please refer to the [Contributing Guidelines](CONTRIBUTING.md) for more information.
+I welcome contributions and suggestions! Please refer to the [Contributing Guidelines](CONTRIBUTING.md) for more information.
+The biggest goals for the project are to add these features:
+- Simpler installation and setup for people without code knowledge
+- A web GUI to run and manage the app
+- More social networks
+- The ability to change the aircraft based on several inputs, such as aircraft type, airport, or airline
 
 ## License
 
 This project is licensed under the [MIT License](LICENSE) - see the LICENSE file for details.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## Acknowledgments
 
