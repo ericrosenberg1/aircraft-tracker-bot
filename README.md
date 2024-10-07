@@ -1,16 +1,16 @@
-# 747 Flight Tracker Bot
+# Aircraft Flight Tracker Bot
 
-## What is the 747 Flight Tracker Bot?
+## What is the Aicraft Flight Tracker Bot?
 
-The 747 Flight Tracker Bot is a Python application designed to monitor and post updates about Boeing 747 flights worldwide. Utilizing data from the OpenSky Network's public API, this bot identifies when a Boeing 747 takes off or lands and shares this information on various social media platforms. Ideal for aviation enthusiasts, the tool aims to provide timely and interesting flight updates to its audience.
+The Aircraft Tracker Bot is a Python application first designed to monitor and post updates about Boeing 747 flights worldwide. Utilizing data from the OpenSky Network's public API, this bot identifies when a Boeing 747 takes off or lands and shares this information on various social media platforms. Ideal for aviation enthusiasts, the tool aims to provide timely and interesting flight updates to its audience.
 
-## Who created the 747 Flight Tracker Bot?
+## Who created the Aircraft Tracker Bot?
 
-This project was developed by Eric Rosenberg, an aviation enthusiast and software developer passionate about combining technology with aviation to create engaging and informative tools for the aviation community.
+This project was developed by Eric Rosenberg, on Github as @ericrosenberg1, an aviation enthusiast and software developer passionate about combining technology with aviation to create engaging and informative tools for the aviation community.
 
 ## What's the purpose of the project?
 
-The purpose of the 747 Flight Tracker Bot is to serve the aviation enthusiast community by providing real-time updates on Boeing 747 flights. Whether for educational purposes, tracking specific flights, or simply for the love of aviation, this bot aims to deliver relevant and interesting content to its users.
+The initial purpose of the 747 Flight Tracker Bot is to serve the aviation enthusiast community by providing real-time updates on Boeing 747 flights. Whether for educational purposes, tracking specific flights, or simply for the love of aviation, this bot aims to deliver relevant and interesting content to its users. Based on community contributions, it can expand to cover other aircraft and data.
 
 In addition to its primary function, the project also demonstrates the practical application of Python programming, API integration, and social media automation. It serves as a valuable tool for those looking to explore these areas further.
 
@@ -38,16 +38,16 @@ This app is currently only suitable for users comfortable with the command line.
 4. Update config.py with your credentials for https://opensky-network.org.
 5. Sign up for the X 2.0 API (formerly Twitter). Get your keys and add them to twitter_config.py.
 6. Run python update_aircraft_db.py to generate a database of aircraft. Run python main.py to run the app.
-7. Set up a cron job to run the aircraft list update monthly and keep main.py running as desired.
+7. Set up a cron job to update the aircraft list monthly and keep main.py running as desired.
 
 ## Usage
 
-When connected to your desired social media accounts and running, it will automatically share aircraft details. For example, in a Tweet.
+When connected to your desired social media accounts and running, it will automatically share aircraft details, such as in a Tweet.
 
 ## Contributing
 
-I welcome contributions and suggestions! Please refer to the [Contributing Guidelines](CONTRIBUTING.md) for more information.
-The biggest goals for the project are to add these features:
+I welcome contributions and suggestions! You can join the project, submit a pull request, or join as a regular contribution.
+The biggest goals for the project for the future include these features:
 - Simpler installation and setup for people without code knowledge
 - A web GUI to run and manage the app
 - More social networks
@@ -56,9 +56,12 @@ The biggest goals for the project are to add these features:
 ## License
 
 This project is licensed under the [MIT License](LICENSE) - see the LICENSE file for details.
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## Acknowledgments
 
 - OpenSky Network for providing the aircraft flight data.
 - The Python community for the excellent documentation and libraries that made this project possible.
+- Claude and ChatGPT for speeding up development and improving my code
+- Codacy, Snyk, and Code Climate for automatic reviews.
