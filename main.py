@@ -2,8 +2,14 @@ import schedule
 import time
 from opensky_api import fetch_aircraft_flights
 from social_media_handler import post_updates
-from storage import check_duplicate, update_record, store_estimated_landing, init_db
-from config import AIRCRAFT_TYPE
+from storage import (
+    check_duplicate,
+    update_record,
+    store_estimated_landing,
+    init_db,
+    cleanup_db,
+)
+from config import AIRCRAFT_TYPE, POLL_INTERVAL_MINUTES, LOG_LEVEL, RETENTION_DAYS, COMPLETION_GRACE_HOURS
 import logging
 import os
 from datetime import datetime, timedelta
@@ -11,7 +17,8 @@ import math
 import json
 
 # Set up logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+level = getattr(logging, str(LOG_LEVEL).upper(), logging.INFO)
+logging.basicConfig(level=level, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 # Load airport database
@@ -44,7 +51,7 @@ def estimate_landing_time(flight_data):
         dest = AIRPORT_DB[flight_data['destination']]
         dist = distance(flight_data['latitude'], flight_data['longitude'], dest['lat'], dest['lon'])
         est_duration = dist / 800  # Assuming an average speed of 800 km/h
-        return datetime.now() + timedelta(hours=est_duration)
+        return datetime.utcnow() + timedelta(hours=est_duration)
     return None
 
 def get_destination(flight_data):
@@ -94,7 +101,7 @@ def process_flight(flight):
                 message += f" Destination: {enriched_data['destination']}."
             
             if enriched_data['estimated_landing_time']:
-                message += f" Estimated landing time: {enriched_data['estimated_landing_time'].strftime('%Y-%m-%d %H:%M:%S UTC')}."
+                message += f" Estimated landing time: {enriched_data['estimated_landing_time'].strftime('%Y-%m-%d %H:%M:%S')} UTC."
 
             try:
                 post_updates(enriched_data, message)
@@ -139,7 +146,9 @@ def main():
 
     init_db()
 
-    schedule.every(5).minutes.do(job)
+    schedule.every(POLL_INTERVAL_MINUTES).minutes.do(job)
+    # Daily cleanup to keep DB lean
+    schedule.every().day.at("03:15").do(lambda: cleanup_db(RETENTION_DAYS, COMPLETION_GRACE_HOURS))
 
     try:
         while True:

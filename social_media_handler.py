@@ -7,6 +7,8 @@ from twitter_config import (
     TWITTER_ACCESS_TOKEN,
     TWITTER_ACCESS_TOKEN_SECRET
 )
+from config import POST_WINDOW_SECONDS, TWITTER_MAX_POSTS_PER_WINDOW
+from storage import can_post, record_post, make_message_hash, is_duplicate_message, record_message_hash
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -50,8 +52,21 @@ def post_to_twitter(message):
             logger.error(f"Unexpected error posting to Twitter: {e}")
 
 def post_updates(flight, message):
-    # Post to Twitter
+    # Dedupe exact same message content
+    msg_hash = make_message_hash(message)
+    if is_duplicate_message(msg_hash):
+        logger.info("Duplicate message detected; skipping post.")
+        return
+
+    # Enforce simple per-window rate limit
+    if not can_post('twitter', POST_WINDOW_SECONDS, TWITTER_MAX_POSTS_PER_WINDOW):
+        logger.warning("Twitter rate limit window reached; skipping post.")
+        return
+
+    # Post to Twitter (X)
     post_to_twitter(message)
+    record_post('twitter')
+    record_message_hash(msg_hash)
 
     # Add logic to post to other social networks here
     # For example:

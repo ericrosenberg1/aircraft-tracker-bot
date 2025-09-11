@@ -17,8 +17,10 @@ In addition to its primary function, the project also demonstrates the practical
 ## Features
 
 - Real-time tracking of Boeing 747 flights worldwide.
-- Automated postings to multiple social media platforms.
-- Filtering and avoidance of duplicate postings.
+- Passenger-only filtering for 747 variants (excludes freighters).
+- Automated postings to social media with built-in rate limiting.
+- Duplicate-post prevention via message hashing.
+- Smart database cleanup with retention policy.
 - Easy customization and scalability for future enhancements.
 
 ## Code Quality
@@ -43,6 +45,31 @@ This app is currently only suitable for users comfortable with the command line.
 ## Usage
 
 When connected to your desired social media accounts and running, it will automatically share aircraft details, such as in a Tweet.
+
+### Configuration
+
+Edit `config.py` to tune runtime behavior:
+- `POLL_INTERVAL_MINUTES`: polling interval (default 10; Pi-friendly)
+- `LOG_LEVEL`: logging verbosity (`INFO` by default)
+- `PASSENGER_TYPECODES`: allowed passenger 747 type codes
+- `POST_WINDOW_SECONDS` and `TWITTER_MAX_POSTS_PER_WINDOW`: per-window post caps
+- `RETENTION_DAYS` and `COMPLETION_GRACE_HOURS`: DB cleanup policy
+
+Rate limits and dedupe are enforced automatically across restarts.
+
+### Raspberry Pi Notes
+
+- Pandas is no longer required at runtime; CSV parsing is lightweight.
+- API requests use compression and timeouts to reduce load.
+- Default polling is conservative; adjust in `config.py` as needed.
+- Use `systemd` or `pm2` to keep the bot running, and schedule daily cleanup (already scheduled at 03:15 by default).
+
+### Database Cleanup
+
+The app automatically:
+- Marks in-progress flights as completed after ETA + grace.
+- Falls back to complete flights still in-progress after 24h.
+- Prunes completed flights and old message hashes after `RETENTION_DAYS`.
 
 ## Contributing
 
