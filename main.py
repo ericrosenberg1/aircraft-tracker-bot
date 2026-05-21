@@ -15,6 +15,14 @@ import os
 from datetime import datetime, timedelta
 import math
 import json
+import sentry_sdk
+
+_dsn = os.getenv("AIRCRAFT_TRACKER_SENTRY_DSN")
+if _dsn:
+    sentry_sdk.init(
+        dsn=_dsn,
+        traces_sample_rate=0.1,
+    )
 
 # Set up logging
 level = getattr(logging, str(LOG_LEVEL).upper(), logging.INFO)
