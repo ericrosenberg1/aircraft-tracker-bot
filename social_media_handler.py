@@ -21,7 +21,13 @@ client = tweepy.Client(
     access_token_secret=TWITTER_ACCESS_TOKEN_SECRET
 )
 
-def post_to_twitter(message):
+def post_to_twitter(message) -> bool:
+    """Attempt to post to Twitter/X. Returns True only on a confirmed successful
+    post. The caller uses this to decide whether to record the post against the
+    rate limit and dedupe hash — previously those were recorded unconditionally,
+    so a failed post (auth error, bad request, exhausted retries) still marked
+    the flight event as "posted", permanently losing it and needlessly eating
+    into the rate-limit window."""
     max_retries = 3
     retry_delay = 60  # seconds
 
@@ -33,7 +39,7 @@ def post_to_twitter(message):
                 logger.info(f"Successfully posted to Twitter. Tweet ID: {tweet_id}")
             else:
                 logger.warning("Tweet was created, but no data was returned.")
-            return
+            return True
         except tweepy.TooManyRequests:
             if attempt < max_retries - 1:
                 logger.warning(f"Rate limit exceeded. Retrying in {retry_delay} seconds...")
@@ -41,15 +47,27 @@ def post_to_twitter(message):
             else:
                 logger.error("Failed to post to Twitter after multiple attempts due to rate limiting.")
         except tweepy.TwitterServerError as e:
-            logger.error(f"Twitter server error: {e}")
+            if attempt < max_retries - 1:
+                logger.warning(f"Twitter server error, retrying in {retry_delay} seconds: {e}")
+                time.sleep(retry_delay)
+            else:
+                logger.error(f"Twitter server error after multiple attempts: {e}")
+        # These are not transient: retrying immediately wastes API calls and can
+        # never succeed, so fail fast instead of burning the remaining attempts.
         except tweepy.Forbidden as e:
-            logger.error(f"Twitter authentication error: {e}")
+            logger.error(f"Twitter authentication error (not retrying): {e}")
+            return False
         except tweepy.BadRequest as e:
-            logger.error(f"Bad request error: {e}")
+            logger.error(f"Bad request error (not retrying): {e}")
+            return False
         except tweepy.NotFound as e:
-            logger.error(f"Not found error: {e}")
+            logger.error(f"Not found error (not retrying): {e}")
+            return False
         except Exception as e:
             logger.error(f"Unexpected error posting to Twitter: {e}")
+            return False
+
+    return False
 
 def post_updates(flight, message):
     # Dedupe exact same message content
@@ -63,8 +81,13 @@ def post_updates(flight, message):
         logger.warning("Twitter rate limit window reached; skipping post.")
         return
 
-    # Post to Twitter (X)
-    post_to_twitter(message)
+    # Post to Twitter (X). Only record the post (rate limit + dedupe hash) when
+    # it actually succeeded — otherwise a failed post silently "consumes" the
+    # flight event and it's never posted or retried.
+    if not post_to_twitter(message):
+        logger.error(f"Failed to post update for flight {flight['icao24']}; not recording as posted.")
+        return
+
     record_post('twitter')
     record_message_hash(msg_hash)
 

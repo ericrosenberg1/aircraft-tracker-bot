@@ -49,7 +49,11 @@ def fetch_aircraft_flights():
         headers = {'Accept-Encoding': 'gzip, deflate', 'User-Agent': '747Tracker/1.0'}
         response = requests.get(url, headers=headers, auth=(OPENSKY_API_USER, OPENSKY_API_PASS), timeout=15)
         response.raise_for_status()  # Ensure we got a valid response
-        data = response.json()['states']
+        # OpenSky returns {"states": null} rather than an empty list when there is
+        # simply nothing to report; without the fallback this raised a TypeError
+        # on len(None), which was swallowed by the outer except and logged as an
+        # "unexpected error" on every such response instead of "0 flights".
+        data = response.json().get('states') or []
         logger.info(f"Fetched {len(data)} flights.")
 
         logger.info("Filtering flights for Boeing 747...")
