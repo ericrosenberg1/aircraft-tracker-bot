@@ -13,11 +13,13 @@ logger = logging.getLogger(__name__)
 AIRPORT_DB_URL = "https://raw.githubusercontent.com/mwgg/Airports/master/airports.json"
 LOCAL_DB_FILENAME = "airport_db.json"
 LOG_FILENAME = "airport_db_update_log.txt"
+# (connect, read) seconds. Without a timeout a stalled server hangs the updater forever.
+REQUEST_TIMEOUT = (10, 60)
 
 def fetch_airport_data():
     logger.info("Fetching airport data...")
     try:
-        response = requests.get(AIRPORT_DB_URL)
+        response = requests.get(AIRPORT_DB_URL, timeout=REQUEST_TIMEOUT)
         response.raise_for_status()
         return response.json()
     except requests.RequestException as e:

@@ -1,8 +1,8 @@
 import os
+import re
 import requests
 import pandas as pd
 import sqlite3
-from bs4 import BeautifulSoup
 from contextlib import closing
 import csv
 import logging
@@ -12,19 +12,24 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 # Constants
-BASE_URL = "https://opensky-network.org/datasets/metadata/"
+# OpenSky turned its dataset page into a JavaScript bucket browser in 2025, so
+# the CSV links are no longer in its HTML. List the public bucket instead.
+BUCKET_URL = "https://s3.opensky-network.org/data-samples/"
+LIST_URL = BUCKET_URL + "?list-type=2&prefix=metadata/aircraft-database-complete-"
 DB_FILENAME = "aircraftData.db"
 TABLE_NAME = "aircraft_type"
 LOG_FILENAME = "download_log.txt"
 BOEING_747_CSV = "boeing_747_icao.csv"
+# (connect, read) seconds. Without a timeout a stalled server hangs the updater forever.
+REQUEST_TIMEOUT = (10, 60)
 
-def get_latest_csv_version(base_url):
+def get_latest_csv_version(list_url):
     logger.info("Fetching the latest dataset version...")
     try:
-        response = requests.get(base_url)
+        response = requests.get(list_url, timeout=REQUEST_TIMEOUT)
         if response.status_code == 200:
-            soup = BeautifulSoup(response.text, 'html.parser')
-            files = [a['href'] for a in soup.find_all('a', href=True) if 'aircraft-database-complete' in a['href'] and a['href'].endswith('.csv')]
+            # S3 ListObjectsV2 XML. Keys end in -YYYY-MM.csv, so they sort by date.
+            files = re.findall(r"<Key>([^<]*aircraft-database-complete-[^<]*\.csv)</Key>", response.text)
             if files:
                 latest_file = sorted(files)[-1]
                 logger.info(f"Found latest version: {latest_file}")
@@ -42,7 +47,7 @@ def get_latest_csv_version(base_url):
 def download_csv(url, filename):
     logger.info(f"Downloading {url}...")
     try:
-        response = requests.get(url)
+        response = requests.get(url, timeout=REQUEST_TIMEOUT)
         response.raise_for_status()
         with open(filename, 'wb') as f:
             f.write(response.content)
@@ -177,9 +182,9 @@ def ensure_database_updated(csv_file, db_file):
     return csv_to_sqlite(csv_file, db_file)
 
 def main():
-    latest_version = get_latest_csv_version(BASE_URL)
+    latest_version = get_latest_csv_version(LIST_URL)
     if latest_version:
-        latest_csv_url = BASE_URL + latest_version
+        latest_csv_url = BUCKET_URL + latest_version
         latest_csv_filename = latest_version.split('/')[-1]
 
         if not os.path.exists(latest_csv_filename):
