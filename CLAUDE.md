@@ -17,3 +17,17 @@
 - `social_media_handler.py` — posting logic
 - `storage.py` — persistence
 - `models.py` — data classes
+- `update_aircraft_db.py` — builds `boeing_747_icao.csv` from OpenSky's aircraft database (lists the `s3.opensky-network.org/data-samples` bucket, the dataset web page is JavaScript-only)
+- `update_airport_db.py` — refreshes `airport_db.json`
+
+## CI and release
+GitHub Actions is off fleet-wide (2026-09-03) and this repo has no workflow
+files. `scripts/ci-gates.sh` runs py_compile, ruff's bug-class rules
+(`E9,F63,F7,F82`, blocking) and the full ruff report (advisory).
+`.githooks/pre-push` runs it after infra-leak-guard, wired with
+`git config core.hooksPath .githooks` (run that once per clone). Bypass with
+`git push --no-verify`.
+
+The bot runs nowhere as of 2026-10-12, so a push to `main` is the whole
+release. Reviving or archiving it is Eric's call.
+
