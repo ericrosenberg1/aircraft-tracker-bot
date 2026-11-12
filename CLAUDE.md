@@ -30,8 +30,3 @@ files. `scripts/ci-gates.sh` runs py_compile, ruff's bug-class rules
 
 The bot runs nowhere as of 2026-10-12, so a push to `main` is the whole
 release. Reviving or archiving it is Eric's call.
-
-
-## Writing voice
-
-Every word of prose in this repo follows Eric's voice card at `~/Code/content-toolkit/voice/voice-card.md`. That covers UI copy, emails, docs, release notes, store listings, commit messages, and PR bodies. Read the card for the rules, and its "The gate" section for the checks and the bar. Never paste either into this file, since a copy drifts.
