@@ -31,3 +31,7 @@ files. `scripts/ci-gates.sh` runs py_compile, ruff's bug-class rules
 The bot runs nowhere as of 2026-10-12, so a push to `main` is the whole
 release. Reviving or archiving it is Eric's call.
 
+
+## Writing voice
+
+Every word of prose in this repo follows Eric's voice card at `~/Code/content-toolkit/voice/voice-card.md`. That covers UI copy, emails, docs, release notes, store listings, commit messages, and PR bodies. Point at the card and never paste its rules here, since a copy drifts. Gate short copy with `python3 ~/Code/content-toolkit/scorer/ai_tells.py FILE --profile article|email|social|title|description --brief` (zero blocks, 80 or higher) and long-form with `content-voice FILE` (90 or higher, 85 is the floor).
